@@ -106,6 +106,34 @@ initialize_fds(void)
     }
 }
 
+static int
+get_usb_state(void)
+{
+       char *android_usb_path = "/sys/class/android_usb/android0/state";
+       char *usb_status[3] = {"CONNECTED", "CONFIGURED", "DISCONNECTED"};
+       char status[13];
+
+       LOGI("getting usb status...");
+
+       FILE *fp = fopen(android_usb_path, "r");
+       if (fp == NULL) {
+               LOGE("Failed reading the android usb path");
+               fclose(fp);
+               return -1;
+       }
+
+       if (fgets(status, sizeof(status), fp) != NULL) {
+               LOGI("usb status %s", status);
+               if (strcmp(status, usb_status[2]) == 0)
+                       return 0;
+               else
+                       return 1;
+       } else {
+               LOGE("Usb status Unkown");
+               return -1;
+       }
+}
+
 int
 acquire_wake_lock(int lock, const char* id)
 {
@@ -165,6 +193,9 @@ set_screen_state(int on)
     QEMU_FALLBACK(set_screen_state(on));
 
     LOGI("*** set_screen_state %d", on);
+
+    if (get_usb_state())
+       return 0;
 
     initialize_fds();
 
