@@ -28,6 +28,10 @@ ifdef WIFI_DRIVER_FW_PATH_PARAM
 LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_PARAM=\"$(WIFI_DRIVER_FW_PATH_PARAM)\"
 endif
 
+ifeq ($(BOARD_WIFI_VENDOR), realtek)
+LOCAL_SRC_FILES += ../realtek/wlan/libhardware_legacy/wifi/wifi_realtek.c
+else
 LOCAL_SRC_FILES += wifi/wifi.c
+endif
 
 LOCAL_SHARED_LIBRARIES += libnetutils
