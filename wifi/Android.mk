@@ -29,7 +29,7 @@ LOCAL_CFLAGS += -DWIFI_DRIVER_FW_PATH_PARAM=\"$(WIFI_DRIVER_FW_PATH_PARAM)\"
 endif
 
 ifeq ($(BOARD_WIFI_VENDOR), realtek)
-LOCAL_SRC_FILES += ../realtek/wlan/libhardware_legacy/wifi/wifi_realtek.c
+LOCAL_SRC_FILES += ../realtek/cm8723u/wlan/libhardware_legacy/wifi/wifi_realtek.c
 else
 LOCAL_SRC_FILES += wifi/wifi.c
 endif
