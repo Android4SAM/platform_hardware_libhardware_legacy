@@ -39,6 +39,7 @@ enum {
     ACQUIRE_PARTIAL_WAKE_LOCK = 0,
     RELEASE_WAKE_LOCK,
     REQUEST_STATE,
+    AUTOSLEEP,
     OUR_FD_COUNT
 };
 
@@ -51,7 +52,8 @@ const char * const OLD_PATHS[] = {
 const char * const NEW_PATHS[] = {
     "/sys/power/wake_lock",
     "/sys/power/wake_unlock",
-    "/sys/power/state"
+    "/sys/power/state",
+    "/sys/power/autosleep"
 };
 
 const char * const AUTO_OFF_TIMEOUT_DEV = "/sys/android_power/auto_off_timeout";
@@ -84,6 +86,7 @@ open_file_descriptors(const char * const paths[])
             return -1;
         }
         g_fds[i] = fd;
+        LOGI("%d ", fd);
     }
 
     g_error = 0;
@@ -137,9 +140,11 @@ get_usb_state(void)
 int
 acquire_wake_lock(int lock, const char* id)
 {
+    int len;
+
     initialize_fds();
 
-//    LOGI("acquire_wake_lock lock=%d id='%s'\n", lock, id);
+    //LOGI("acquire_wake_lock lock=%d id='%s' g_error=%d\n", lock, id, g_error);
 
     if (g_error) return g_error;
 
@@ -152,26 +157,39 @@ acquire_wake_lock(int lock, const char* id)
         return EINVAL;
     }
 
-    return write(fd, id, strlen(id));
+    len = write(fd, id, strlen(id));
+    if(len < 0) {
+        LOGE("Failed acquiring wakelock: len=%d\n", len);
+        return len;
+    }
+
+    return len;
 }
 
 int
 release_wake_lock(const char* id)
 {
+    int len;
+
     initialize_fds();
 
-//    LOGI("release_wake_lock id='%s'\n", id);
+    //LOGI("release_wake_lock id='%s'\n", id);
 
     if (g_error) return g_error;
 
-    ssize_t len = write(g_fds[RELEASE_WAKE_LOCK], id, strlen(id));
-    return len >= 0;
+    len = write(g_fds[RELEASE_WAKE_LOCK], id, strlen(id));
+    if(len < 0) {
+        LOGE("Failed releasing wakelock: len=%d\n", len);
+        return len;
+    }
+
+    return len;
 }
 
 int
 set_last_user_activity_timeout(int64_t delay)
 {
-//    LOGI("set_last_user_activity_timeout delay=%d\n", ((int)(delay)));
+    LOGI("set_last_user_activity_timeout delay=%d\n", ((int)(delay)));
 
     int fd = open(AUTO_OFF_TIMEOUT_DEV, O_RDWR);
     if (fd >= 0) {
@@ -208,12 +226,12 @@ set_screen_state(int on)
     char buf[32];
     int len;
     if(on)
-        len = snprintf(buf, sizeof(buf), "%s", on_state);
+        len = snprintf(buf, sizeof(buf), "%s", "off");
     else
-        len = snprintf(buf, sizeof(buf), "%s", off_state);
+        len = snprintf(buf, sizeof(buf), "%s", "mem");
 
     buf[sizeof(buf) - 1] = '\0';
-    len = write(g_fds[REQUEST_STATE], buf, len);
+    len = write(g_fds[AUTOSLEEP], buf, len);
     if(len < 0) {
     failure:
         LOGE("Failed setting last user activity: g_error=%d\n", g_error);
