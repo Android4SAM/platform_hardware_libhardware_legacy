@@ -209,6 +209,7 @@ int is_wifi_driver_loaded() {
 #endif
 }
 
+#define TIME_COUNT 20
 int wifi_load_driver()
 {
 #ifdef WIFI_DRIVER_MODULE_PATH
@@ -223,8 +224,38 @@ int wifi_load_driver()
         return -1;
 
     if (strcmp(FIRMWARE_LOADER,"") == 0) {
+#ifdef WILC1000_WIFI_USED
+	char tmp_buf[200] = {0};
+	FILE *profs_entry = NULL;
+	int try_time = 0;
+	do {
+	profs_entry = fopen("/proc/net/wireless", "r");
+	if(profs_entry == NULL){
+		ALOGE("open /proc/net/wireless failed!");
+		property_set(DRIVER_PROP_NAME, "failed");
+		break;
+	}
+	if( 0 == fread(tmp_buf, 200, 1, profs_entry) ){
+		ALOGD("faied to read proc/net/wireless");
+	}
+	if(NULL != strstr(tmp_buf, "wlan0")) {
+		ALOGD("insmod okay,try_time(%d)", try_time);
+		fclose(profs_entry);
+		profs_entry = NULL;
+		property_set(DRIVER_PROP_NAME, "ok");
+		break;
+	}else {
+		ALOGD("initial,try_time(%d)",try_time);
+		property_set(DRIVER_PROP_NAME, "failed");
+	}
+	fclose(profs_entry);
+	profs_entry = NULL;
+	usleep(200000);
+	}while(try_time++ <= TIME_COUNT);// 4 seconds
+#else
         /* usleep(WIFI_DRIVER_LOADER_DELAY); */
         property_set(DRIVER_PROP_NAME, "ok");
+#endif
     }
     else {
         property_set("ctl.start", FIRMWARE_LOADER);
@@ -827,6 +858,7 @@ int wifi_change_fw_path(const char *fwpath)
     int fd;
     int ret = 0;
 
+#ifndef WILC1000_WIFI_USED
     if (!fwpath)
         return ret;
     fd = TEMP_FAILURE_RETRY(open(WIFI_DRIVER_FW_PATH_PARAM, O_WRONLY));
@@ -840,5 +872,6 @@ int wifi_change_fw_path(const char *fwpath)
         ret = -1;
     }
     close(fd);
+#endif
     return ret;
 }
